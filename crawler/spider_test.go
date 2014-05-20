@@ -3,7 +3,7 @@ package main
 import "testing"
 import "io/ioutil"
 import "strings"
-// import "fmt"
+import "fmt"
 
 func Test_Scrub(t *testing.T) {
   b, err := ioutil.ReadFile("test_urls.txt")
@@ -18,6 +18,19 @@ func Test_Scrub(t *testing.T) {
   }  
 }
 
+func Test_Links(t *testing.T) {
+  link := "https://sg.yahoo.com/?p=us"
+  extracted := links_from(link)
+  fmt.Println(extracted)
+}
+
 func Test_Index(t *testing.T) {
+  link := "https://sg.yahoo.com/?p=us"
+  words, title, err := index(link)
+  if err != nil { 
+   t.Errorf("Error is %v", err) 
+  }
+  fmt.Println(words)
+  fmt.Println(title)
   
 }
