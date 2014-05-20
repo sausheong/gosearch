@@ -1,0 +1,4 @@
+psql -h localhost -c "create user gosearch with password 'gosearch'"
+psql -h localhost -c "drop database if exists gosearch"
+psql -h localhost -c "create database gosearch"
+psql -h localhost -c "grant all privileges on database gosearch to gosearch"

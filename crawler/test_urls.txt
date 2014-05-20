@@ -1,0 +1,8 @@
+https://sg.yahoo.com/?p=us
+http://localhost:8000/test
+http://www.qoo10.sg/gmkt.inc/special/special.aspx?sid=2184&jaehuid=200000002&group_nm=shopping
+http://list.qoo10.sg/gmkt.inc/Category/?gdlc_cd=100000001&gdmc_cd=200000001
+http://hsrd.yahoo.com/_ylt=AhFNeefR0sq5T9bISKYjUAaCG7J_/RV=1/RE=1401717729/RH=aHNyZC55YWhvby5jb20-/RO=2/RU=aHR0cDovL3NnLnByZW1pZXJzaGlwLmZhbnRhc3lzcG9ydHMueWFob28uY29tL2Zvb3RiYWxsL2dyb3Vwcw--/RS=%5EADAQE4w4JZQW4pTcOIzySLhy81cFbg-
+http://rosettacode.org/wiki/Read_a_file_line_by_line#Go
+https://www.google.com/search?q=how+to+use+golang+flag+package&ie=utf-8&oe=utf-8&aq=t#newwindow=1&q=golang+package+go+run
+https://groups.google.com/forum/#!topic/golang-nuts/qysy2bM_o1I
