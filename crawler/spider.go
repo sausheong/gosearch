@@ -3,10 +3,12 @@ package main
 import "flag"
 import "net/url"
 import "fmt"
-// import "strings"
+import "strings"
 import "net/http"
 // import "io/ioutil"
 import "code.google.com/p/go.net/html"
+import "github.com/advancedlogic/GoOse"
+import "regexp"
 
 var do_setup = flag.Bool("setup", false, "Run setup for GoSearch")
 var spiders = 1
@@ -40,6 +42,21 @@ func index(url string) (words []string, title string, err error) {
 
 func add_to_index() {
 
+}
+
+func words_from(link string) (words []string) {
+  g := goose.New()
+  article := g.ExtractFromUrl(link)
+  var text string = article.CleanedText
+  str := strings.TrimSpace(text)
+  split_words := strings.Split(str, " ")
+  
+  r, _ := regexp.Compile("[^A-Za-z]")   
+  for _, val := range split_words {
+    w := r.ReplaceAllString(val, "")
+    words = append(words, w)
+  }  
+  return
 }
 
 func scrub(link string) (scrubbed string, err error){
@@ -77,3 +94,4 @@ func find_links(n *html.Node, links *[]string) {
     find_links(c, links)
   }
 }
+
