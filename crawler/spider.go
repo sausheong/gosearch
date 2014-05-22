@@ -2,13 +2,14 @@ package main
 
 import "flag"
 import "net/url"
-import "fmt"
 import "strings"
 import "net/http"
-// import "io/ioutil"
+import "regexp"
+
+import "github.com/reiver/go-porterstemmer"
 import "code.google.com/p/go.net/html"
 import "github.com/advancedlogic/GoOse"
-import "regexp"
+
 
 var do_setup = flag.Bool("setup", false, "Run setup for GoSearch")
 var spiders = 1
@@ -24,19 +25,20 @@ func process() {
   
 }
 
+// indexes a page
 func index(url string) (words []string, title string, err error) {
   resp, err := http.Get(url)
   if err != nil {
-    fmt.Println("Error is %v", err)
+    println("Error is %v", err)
   }
   defer resp.Body.Close()
   
   doc, err := html.Parse(resp.Body)
   if err != nil {
-    fmt.Println("Error is %v", err)
+    println("Error is %v", err)
   }  
 
-  fmt.Println("doc", doc)
+  println("doc", doc)
   return
 }
 
@@ -44,6 +46,8 @@ func add_to_index() {
 
 }
 
+// Get words from a given link, returning an array of strings
+// words are set to lower case, checked for stop words and stemmed
 func words_from(link string) (words []string) {
   g := goose.New()
   article := g.ExtractFromUrl(link)
@@ -56,34 +60,38 @@ func words_from(link string) (words []string) {
   for _, val := range split_words {
     w := r.ReplaceAllString(val, "")
     if !ignore(w) {
+      w = porterstemmer.StemString(w)
+      println(w)
       words = append(words, w)
     }    
   }  
   return
 }
 
+// Scrub a link for uniformity
 func scrub(link string) (scrubbed string, err error){
   u, err := url.Parse(link)
   scrubbed = u.String()
   return
 }
 
-
+// Find links from a given URL
 func links_from(url string) (links []string) {
   resp, err := http.Get(url)
   if err != nil {
-    fmt.Println("Error is %v", err)
+    println("Error is %v", err)
   }
   defer resp.Body.Close()
   
   doc, err := html.Parse(resp.Body)
   if err != nil {
-    fmt.Println("Error is %v", err)
+    println("Error is %v", err)
   }  
   find_links(doc, &links)
   return  
 }
 
+// Iterative function to find links, given a node
 func find_links(n *html.Node, links *[]string) {
   if n.Type == html.ElementNode && n.Data == "a" {
     for _, a := range n.Attr {
@@ -97,6 +105,8 @@ func find_links(n *html.Node, links *[]string) {
     find_links(c, links)
   }
 }
+
+// Check if the word is a stopword and should therefore be ignored
 
 func ignore(word string) (ignored bool) {
   stopwords := map[string]bool{
