@@ -27,17 +27,15 @@ func Test_Links(t *testing.T) {
   }
 }
 
-// func Test_Index(t *testing.T) {
-//   link := "https://sg.yahoo.com/?p=us"
-//   words, title, err := index(link)
-//   if err != nil { 
-//    t.Errorf("Error is %v", err) 
-//   }
-//   println(words)
-//   fprintln(title)
-//   
-// }
-// 
+func Test_Index(t *testing.T) {
+  link := "https://sg.news.yahoo.com/red-faces-french-trains-too-wide-stations-144918613.html"
+  err := index(link)
+  if err != nil { 
+   t.Errorf("Error is %v", err) 
+  }
+  
+}
+
 func Test_WordsFrom(t *testing.T) {
   words := words_from("https://sg.news.yahoo.com/red-faces-french-trains-too-wide-stations-144918613.html")
   for _, val := range words {
