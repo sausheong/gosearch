@@ -1,5 +1,6 @@
 package main
 
+import "os"
 import "flag"
 import "net/url"
 import "strings"
@@ -15,6 +16,7 @@ import "github.com/advancedlogic/GoOse"
 import "github.com/foize/go.fifo"
 
 var do_setup = flag.Bool("setup", false, "Run setup for GoSearch")
+var do_force = flag.Bool("force", false, "Force to revisit all indexed pages from seed file")
 var spiders = 1
 var in_progress = fifo.NewQueue()
 
@@ -26,7 +28,7 @@ func main() {
   
   // process now
   // load urls into the in_progress queue
-  b, err := ioutil.ReadFile("test_urls.txt")
+  b, err := ioutil.ReadFile("seed.txt")
   if err != nil { 
    println("Error is %v", err) 
   }
@@ -34,39 +36,49 @@ func main() {
     in_progress.Add(line)
   }    
 
-  // index the in progress queue
-  for {    
-    index()
-  }
+  // index the urls in progress queue
+  go index()
+  
+  var input string
+  fmt.Scanln(&input)
 }
 
 // indexes a page
 func index() {
-  url := in_progress.Next().(string)
-  scrubbed_url, err := scrub(url)
-  if err != nil {
-    fmt.Println("Error while indexing is %v", err)
+  for {
+    item := in_progress.Next()
+  
+    if item != nil {
+      u := item.(string)
+      page := Page{Url: u}
+      DB.Where(page).FirstOrCreate(&page)
+      println("Indexing page ", page.Url)
+      if *do_force || (time.Since(page.CreatedAt).Seconds() < 1) || (time.Since(page.UpdatedAt).Hours() > 24) {
+        page.UpdatedAt = time.Now()
+        DB.Save(&page)
+    
+        println("- OK")
+        words := words_from(u)
+        for i := 0; i < len(words); i++ {
+          w := words[i]
+          word := Word{Stem: w}
+          DB.Where(word).FirstOrCreate(&word)
+          loc := Location{Position: int64(i), WordId: word.Id, PageId: page.Id}
+          DB.Where(loc).FirstOrCreate(&loc)
+        }       
+        extracted_links := links_from(u)
+        println("- no of links found -> ", len(extracted_links))
+        for _, link := range extracted_links {
+          in_progress.Add(link)
+        }  
+      } else {
+        println(" - Already indexed")
+      }
+    } else {
+      println("No more items - exiting crawler")
+      os.Exit(0)
+    }
   }
-  page := Page{Url: scrubbed_url}
-  DB.Where(page).FirstOrCreate(&page)
-  println("Indexing page ", page.Url)
-  if time.Since(page.UpdatedAt).Hours() < 24 {
-    println("Indexing now")
-    words := words_from(url)
-    for i := 0; i < len(words); i++ {
-      w := words[i]
-      word := Word{Stem: w}
-      DB.Where(word).FirstOrCreate(&word)
-      loc := Location{Position: int64(i), WordId: word.Id, PageId: page.Id}
-      DB.Where(loc).FirstOrCreate(&loc)
-    }       
-  } else {
-    println(" - Page already indexed")
-  }
-  extracted_links := links_from(url)
-  for _, link := range extracted_links {
-    in_progress.Add(link)
-  }  
   return
 }
 
@@ -91,41 +103,44 @@ func words_from(link string) (words []string) {
   return
 }
 
-// Scrub a link for uniformity
-func scrub(link string) (scrubbed string, err error){
-  u, err := url.Parse(link)
-  scrubbed = u.String()
-  return
-}
-
 // Find links from a given URL
-func links_from(url string) (links []string) {
+func links_from(url string) (links []string) { 
   resp, err := http.Get(url)
   if err != nil {
-    fmt.Println("Error is %v", err)
+    fmt.Println("Error in getting URL - ", err)
+    return
   }
   defer resp.Body.Close()
   
   doc, err := html.Parse(resp.Body)
   if err != nil {
-    fmt.Println("Error is %v", err)
+    fmt.Println("Error in parsing html - ", err)
+    return
   }  
-  find_links(doc, &links)
+  find_links(url, doc, &links)
   return  
 }
 
 // Iterative function to find links, given a node
-func find_links(n *html.Node, links *[]string) {
+func find_links(parent string, n *html.Node, links *[]string) {
+  parent_url, _ := url.Parse(parent)
   if n.Type == html.ElementNode && n.Data == "a" {
     for _, a := range n.Attr {
       if a.Key == "href" {
-        *links = append(*links, a.Val)
-        break
+        link, err := url.Parse(a.Val)
+        if err != nil {
+          fmt.Println("Error while finding link - ", err)
+        } else {
+          link = parent_url.ResolveReference(link)    
+          if !ignored_link(link.Path) {
+            *links = append(*links, link.String())
+          }
+        }
       }
     }
   }
   for c := n.FirstChild; c != nil; c = c.NextSibling {
-    find_links(c, links)
+    find_links(parent, c, links)
   }
 }
 
@@ -133,5 +148,13 @@ func find_links(n *html.Node, links *[]string) {
 
 func ignore(word string) (ignored bool) {
   ignored = Stopwords[strings.ToLower(word)]
+  return
+}
+
+func ignored_link(link string) (ignored bool) {
+  ignored = strings.HasSuffix(link, "jpg") || 
+  strings.HasSuffix(link, "gif") || 
+  strings.HasSuffix(link, "png") ||   
+  strings.HasSuffix(link, "pdf") 
   return
 }
